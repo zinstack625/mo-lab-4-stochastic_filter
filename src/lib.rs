@@ -9,12 +9,12 @@ fn harmonic_mean(noisy_func: &[f64], k: usize, alpha: &[f64], r: usize) -> f64 {
     let mut mean = 0f64;
     let m = r / 2;
     if k < m {
-        for i in 0..=(k + m) {
+        for i in 0..r {
             mean += alpha[i] / noisy_func[i];
         }
-    } else if k + m > noisy_func.len() - 1 {
-        for i in (k - m)..k {
-            mean += alpha[i + m - k] / noisy_func[i];
+    } else if k + m >= noisy_func.len() {
+        for i in 1..=r {
+            mean += alpha[alpha.len() - i] / noisy_func[k - i];
         }
     } else {
         for i in (k - m)..=(k + m) {
@@ -29,7 +29,7 @@ fn get_alpha(r: usize) -> Vec<f64> {
     let m = (r + 1) / 2 - 1;
     alpha[m] = thread_rng().gen_range(0f64..=1f64);
     let mut alpha_sum = alpha[m];
-    for i in 1..=m {
+    for i in 1..m {
         alpha[m - i] = 0.5f64 * thread_rng().gen_range(0f64..=(1f64 - alpha_sum));
         alpha[m + i] = alpha[m - i];
         alpha_sum += 2f64 * alpha[m - i];
@@ -63,7 +63,7 @@ fn noise_crit(noisy_func: &[f64], alpha: &[f64], r: usize) -> f64 {
         let second = harmonic_mean(noisy_func, i, alpha, r);
         omega += (second - first).powi(2);
     }
-    omega
+    omega.sqrt()
 }
 
 fn divergence_crit(noisy_func: &[f64], alpha: &[f64], r: usize) -> f64 {
@@ -105,14 +105,14 @@ pub fn filter(noisy_func: &[f64], r: usize, range: (f64, f64)) -> (Vec<f64>, Vec
         let mut alpha_string = String::new();
         alpha_string.push_str("[ ");
         for i in alpha.iter().enumerate() {
-            alpha_string.push_str(i.1.to_string().as_str());
+            alpha_string.push_str(&i.1.to_string()[0..6]);
             if i.0 < alpha.len() - 1 {
                 alpha_string.push_str(", ")
             } else {
                 alpha_string.push_str(" ]");
             }
         }
-        table.add_row(row![lambda, dist, alpha_string, omega, delta]);
+        table.add_row(row![lambda, &dist.to_string()[0..6], alpha_string, &omega.to_string()[0..6], &delta.to_string()[0..6]]);
         coeffs_vector.push((omega.clone(), delta.clone()));
         if min_dist.is_none() || *min_dist.as_ref().unwrap() > dist {
             min_dist = Some(dist);
